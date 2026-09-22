@@ -1,0 +1,11 @@
+{
+  "description": "Response policy: highest finding severity x risk class of the NEW definition -> verdict. Default table from q4_trust_layer/DESIGN.md section 0.1. NONE = the differ found nothing.",
+  "matrix": {
+    "NONE":     { "read_only": "resume",     "side_effecting": "resume",     "destructive": "resume" },
+    "INFO":     { "read_only": "resume",     "side_effecting": "resume",     "destructive": "resume" },
+    "WARN":     { "read_only": "warn",       "side_effecting": "warn",       "destructive": "suspend" },
+    "BREAKING": { "read_only": "suspend",    "side_effecting": "suspend",    "destructive": "suspend" },
+    "SECURITY": { "read_only": "quarantine", "side_effecting": "quarantine", "destructive": "quarantine" }
+  },
+  "risk_overrides": []
+}

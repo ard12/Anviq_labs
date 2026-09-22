@@ -1,0 +1,28 @@
+[project]
+name = "q4-control"
+version = "0.1.0"
+description = "Q4 control plane: classifies tool-definition changes reported by the proxy (Q3 differ + policy table + quarantine)."
+requires-python = ">=3.12"
+# `harness` is the local Q3 package (../../q3_tool_harness). It is not on PyPI, so install it first:
+#   pip install -e ../../q3_tool_harness
+# The tests and demo do not need that step (conftest.py / demo.py put the folder on sys.path).
+dependencies = ["harness>=0.1.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+q4-control = "control.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["control*"]
+
+[tool.setuptools.package-data]
+control = ["*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

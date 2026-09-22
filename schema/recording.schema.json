@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anviq.local/schema/recording/v1",
+  "title": "Tool-session recording event (one JSON object per JSONL line)",
+  "description": "Shared contract between the Q3 harness (Python) and the Q4 proxy (Go). A recording is a JSONL file of these events in seq order. Hashes use canonical.py (RFC 8785 JCS + SHA-256), verified by golden_vectors.json.",
+  "type": "object",
+  "required": ["v", "seq", "ts", "session_id", "type"],
+  "properties": {
+    "v": { "const": 1, "description": "Schema version. Bump on breaking change." },
+    "seq": { "type": "integer", "minimum": 0, "description": "Monotonic per session, starting at 0, no gaps." },
+    "ts": { "type": "string", "format": "date-time", "description": "RFC 3339 UTC wall-clock time. Informational only; ordering is by seq." },
+    "session_id": { "type": "string", "minLength": 1 },
+    "type": { "enum": ["session_start", "tool_definition", "tool_call", "tool_response", "policy_decision", "session_end"] },
+    "prev_hash": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$", "description": "event_hash of the previous event in this session; null for seq 0. Makes the log tamper-evident." },
+    "event_hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "canonical.event_hash(this event without event_hash)." }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "const": "session_start" } } },
+      "then": {
+        "required": ["agent"],
+        "properties": {
+          "agent": { "type": "string", "description": "Agent identifier/version." },
+          "meta": { "type": "object", "description": "Free-form: model, git sha, environment." }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "tool_definition" } } },
+      "then": {
+        "required": ["server", "tool", "def_hash"],
+        "properties": {
+          "server": { "type": "string", "description": "Stable tool-server identifier (e.g. URL or registry name)." },
+          "tool": { "$ref": "#/$defs/tool" },
+          "def_hash": { "$ref": "#/$defs/hash", "description": "canonical.tool_hash(tool)." }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "tool_call" } } },
+      "then": {
+        "required": ["call_id", "server", "tool_name", "def_hash", "args"],
+        "properties": {
+          "call_id": { "type": "string" },
+          "server": { "type": "string" },
+          "tool_name": { "type": "string" },
+          "def_hash": { "$ref": "#/$defs/hash", "description": "Hash of the definition in force when the call was made. Ties behaviour to contract." },
+          "args": { "type": "object" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "tool_response" } } },
+      "then": {
+        "required": ["call_id", "ok", "latency_ms"],
+        "properties": {
+          "call_id": { "type": "string" },
+          "ok": { "type": "boolean" },
+          "result": { "description": "Present when ok=true. Any JSON." },
+          "error": {
+            "type": "object",
+            "required": ["message"],
+            "properties": { "code": {}, "message": { "type": "string" } }
+          },
+          "latency_ms": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "policy_decision" } } },
+      "then": {
+        "required": ["server", "tool_name", "action", "reason"],
+        "properties": {
+          "server": { "type": "string" },
+          "tool_name": { "type": "string" },
+          "call_id": { "type": "string" },
+          "action": { "enum": ["allow", "warn", "block", "quarantine"] },
+          "reason": { "type": "string" },
+          "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "session_end" } } },
+      "then": {
+        "required": ["reason"],
+        "properties": { "reason": { "enum": ["completed", "aborted", "error", "policy"] } }
+      }
+    }
+  ],
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "tool": {
+      "type": "object",
+      "description": "MCP-shaped tool definition.",
+      "required": ["name", "inputSchema"],
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "inputSchema": { "type": "object" },
+        "outputSchema": { "type": "object" },
+        "annotations": { "type": "object", "description": "e.g. readOnlyHint, destructiveHint (MCP)." }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "description": "Emitted by the Q3 differ; reused by Q4 policy decisions.",
+      "required": ["severity", "rule_id", "path", "message"],
+      "properties": {
+        "severity": { "enum": ["BREAKING", "SECURITY", "WARN", "INFO"] },
+        "rule_id": { "type": "string", "description": "Stable id, e.g. PARAM_REMOVED, DESC_EXFIL_PATTERN." },
+        "tool": { "type": "string" },
+        "path": { "type": "string", "description": "JSON Pointer into the tool definition, e.g. /inputSchema/properties/path/type." },
+        "message": { "type": "string" },
+        "before": {},
+        "after": {}
+      }
+    }
+  }
+}

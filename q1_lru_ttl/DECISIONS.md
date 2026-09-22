@@ -1,0 +1,66 @@
+# Decision log — Q1 LRU + TTL
+
+Format: **Decision** / Alternatives / Why / Revisit when. If I can't defend an entry
+out loud in the interview, it shouldn't be here.
+
+---
+
+### Q1-001 Hand-rolled doubly linked list (DLL) + dict, not `collections.OrderedDict`
+- **Alternatives:** `OrderedDict` (`move_to_end` + `popitem`, both O(1), C-implemented); a `dict` alone (Python 3.7+ dicts are insertion-ordered but don't support O(1) reordering of an arbitrary existing key); a doubly linked list without sentinels.
+- **Why:** the brief asks for the mechanism, not just the result. A hand-rolled DLL with a `dict[key -> Node]` index makes every operation's O(1)-ness inspectable line by line: `get` does one dict lookup plus two pointer swaps, `put`'s eviction does one dict deletion plus two pointer swaps. `OrderedDict` gets you the same complexity for free and is what I'd actually ship (`ordered_dict_impl.py`), but it hides the mechanism behind a C implementation, which defeats the point of an interview problem about that mechanism.
+- **Revisit when:** never, for this codebase — the two implementations are permanent, parallel, and both tested identically (`tests/test_cache.py`, `tests/test_ttl.py` parametrize over both). If this shipped for real, `OrderedDictLRUTTLCache` is the one I'd deploy.
+
+### Q1-002 Sentinel head/tail nodes for the DLL
+- **Alternatives:** `head`/`tail` as plain `None`, with `if node.prev is None` branches at every boundary.
+- **Why:** sentinels make the list invariant "every node in the list has a real `.prev` and `.next`" hold unconditionally, including for a list of size 0 or 1. That removes every boundary `if` from `_unlink`/`_push_front`/`_move_to_front` — they're identical whether the node being touched is in the middle, at an end, or the only real node. Fewer branches to get wrong is the entire value proposition here; the cost is two extra `_Node` objects that never hold real data (their `key`/`value` are `cast`-lied-to as `None` and never read).
+- **Revisit when:** never — this is a textbook technique with essentially no downside for a structure this size.
+
+### Q1-003 Lazy expiry, with an O(1) opportunistic check on the LRU tail before eviction — not a heap/timing wheel
+- **Alternatives:** (a) pure lazy expiry, no tail check — evict whatever is LRU even if something more obviously stale exists nearby; (b) a min-heap keyed on `expires_at` for O(log n) "find the most-expired entry"; (c) a timing wheel (bucket entries by expiry time, sweep buckets as the clock advances) for amortized O(1) active expiry.
+- **Why:** `get` already has to check one node for expiry (the one it looked up) — that's unavoidable and free. `put`'s eviction path already has to look at exactly one node (the LRU tail) to know what to evict — checking whether *that same node* happens to be expired costs nothing extra and turns a wasted eviction of live data into a free reclaim. Going further (finding *any* expired entry anywhere, not just at the tail) needs a second data structure kept in sync with every `put`/`delete`/eviction: a heap adds O(log n) to every write to maintain heap order; a timing wheel adds bucket-management complexity and a "now" sweep that has to run somewhere (on every op? a background thread?). Both are real, used-in-production techniques (Redis's active-expiry cycle is closer to a sampling scheme than either) — they're out of scope here because they add maintenance work to the average-O(1) hash-table hot path, in exchange for reclaiming memory faster than "eventually, when touched or evicted." See README.md "Lazy vs active expiry".
+- **Revisit when:** memory pressure from un-reclaimed expired entries (keys that expire but are never `get`/evicted again) becomes a measured problem. A background sweep thread that periodically samples random keys and evicts expired ones (Redis's actual approach) is the smallest next step — no new core data structure, just a periodic pass over `_index`.
+
+### Q1-004 `put` on an existing key always resets the TTL (and moves it to MRU)
+- **Alternatives:** preserve the original `expires_at` on update ("the key's clock keeps running regardless of writes"); make it configurable per call.
+- **Why:** the intuitive contract for a TTL cache is "this data is fresh for N seconds *from when I last set it*" — a `put` is new information, so it should get a new freshness window. Preserving the original expiry would mean a key you just wrote could expire on you almost immediately if the original TTL was short and the update happened late in its window, which is surprising. This mirrors `SET` + `EX` semantics in Redis (`SET` resets any TTL unless you explicitly use `KEEPTTL`).
+- **Revisit when:** a caller needs Redis's `KEEPTTL` behavior. It's a small addition (`put(..., ttl=KEEP_TTL)` sentinel, parallel to `_USE_DEFAULT`) but not built because nothing in the brief calls for it.
+
+### Q1-005 The boundary (`now == expires_at`) counts as expired
+- **Alternatives:** expired only when `now > expires_at` (boundary still valid).
+- **Why:** `expires_at = put_time + ttl` — if `ttl=10` means "valid for 10 seconds", then at `put_time + 10` exactly, 10 seconds have fully elapsed, so the entry should no longer be considered fresh. `>=` is also the simpler invariant to hold in your head ("expired means clock has reached or passed the deadline") and matches how most TTL/expiry systems are specified. Tested explicitly (`test_miss_exactly_at_ttl_boundary`, `test_hit_just_before_ttl_boundary`) because a fencepost error here is the single easiest bug to introduce.
+- **Revisit when:** never expected to change; it's a one-line definition, and the tests pin it down.
+
+### Q1-006 Injectable clock, monotonic by default — never wall-clock time
+- **Alternatives:** `time.time()` (wall clock) as the default; hardcode `time.monotonic` with no injection point at all.
+- **Why:** wall-clock time can jump — NTP resync, a leap second, a user or `ntpd` manually correcting drift, a VM pausing and resuming with a corrected clock on resume. Any backward jump could make an already-expired entry look fresh again (or vice versa), which is a correctness bug that depends on system-clock behavior outside this code's control — exactly the kind of bug that's nearly impossible to reproduce and debug later. `time.monotonic()` only ever moves forward (per the Python docs) and is unaffected by system clock updates, so it's the only sound default. The `clock` parameter exists purely so tests can control time exactly (`FakeClock`) without `time.sleep`, which is why every test using it is instant and exact instead of flaky and slow.
+- **Revisit when:** never for correctness. Might swap the *type* of monotonic clock (e.g. a distributed logical clock) if this cache ever needs to agree on expiry across machines — see README's "distributed cache" section.
+
+### Q1-007 A distinct `MISS` sentinel object as `get`'s default, not `None`
+- **Alternatives:** `get` returns `None` on both "key absent" and "key present with value `None`" (like a naive dict wrapper); raise `KeyError` on miss (dict-subscript style); return an `Optional[V]` and require callers to also check `key in cache` to disambiguate.
+- **Why:** the brief explicitly calls out caching a `None` value as a case to handle deliberately. If `get` returned `None` for both "absent" and "stored value is `None`", a caller has no way to distinguish "there's nothing here" from "we cached the absence of a result" (a common real use: caching a negative lookup). `MISS` is a private, un-instantiable-elsewhere sentinel object, so `result is MISS` is unambiguous. Callers who don't need the distinction can still pass their own `default=` (`cache.get(key, default=None)` behaves exactly like `dict.get`), so this doesn't force ceremony on the common case.
+- **Revisit when:** never — this is a standard pattern (see `object()` sentinels throughout the stdlib, e.g. `dataclasses.MISSING`) chosen specifically because the brief flagged the ambiguity.
+
+### Q1-008 A second sentinel (`_USE_DEFAULT`) for `put`'s `ttl` parameter
+- **Alternatives:** make `ttl`'s default `None` and treat that as "use `default_ttl`" (the obvious-looking option).
+- **Why:** `ttl=None` is already a meaningful, distinct value in this API — "this key never expires, regardless of `default_ttl`." If the parameter's default were also `None`, `put(key, value)` (no `ttl` argument) and `put(key, value, ttl=None)` (explicit "never expires") would be indistinguishable, silently breaking `default_ttl` for every caller who just wants the normal behavior. A second, private sentinel (`_USE_DEFAULT`) keeps "omitted" and "explicitly `None`" as two different, testable states (`test_ttl_none_on_put_never_expires_even_with_default_ttl` vs. the implicit-default tests).
+- **Revisit when:** never — the alternative is a latent footgun, not a simplification.
+
+### Q1-009 `ThreadSafeLRUTTLCache`: one `threading.Lock`, and `get` takes it too
+- **Alternatives:** no lock on `get` (it "just reads"); a `RLock`; per-shard locks (striping) from the start; a lock-free structure (e.g. via `queue.Queue`-style atomics, or accepting eventual/approximate LRU order under concurrency).
+- **Why:** `get` mutates the DLL (moves the accessed node to MRU) and, on an expired hit, mutates both the DLL and the index — it is not read-only at the pointer level even though it looks read-only from the caller's side. Skipping the lock on `get` would let two threads race on `_head.next`/node `.prev`/`.next` writes and corrupt the list (a node partially spliced in, or a cycle), which corrupts *every* subsequent operation, not just that one call. A single non-reentrant `Lock` (not `RLock`) is the simplest correct thing, and correctness was the priority for this submission; a plain `Lock` is also slightly cheaper than an `RLock` and nothing here calls back into a locked method while already holding the lock, so reentrancy isn't needed.
+- **Revisit when:** profiling shows this lock is a real bottleneck under production concurrency (it will be, at high thread counts, since it serializes the *entire* cache). Lock striping — N independent `LRUTTLCache` shards keyed by `hash(key) % N`, each with its own lock — is the documented next step (see module docstring in `threadsafe.py` and README). It trades one exact global LRU order for N approximately-independent ones, which is the standard trade every real high-throughput cache (e.g. Caffeine, Guava) makes.
+
+### Q1-010 `stats` is a plain mutable `CacheStats` dataclass, not a private counter with a read-only accessor
+- **Alternatives:** private `_hits`/`_misses`/etc. ints with a `stats` property returning a fresh snapshot each time (what `ThreadSafeLRUTTLCache.stats` actually does, since it must snapshot under the lock anyway); a `Protocol`/read-only view type.
+- **Why:** for the unsynchronized `LRUTTLCache`, there's no concurrent-mutation hazard to guard against, so a plain public dataclass instance is the simplest thing that's still easy to reason about (`cache.stats.hits`) — nothing stops a caller from mutating it, but nothing in this codebase does, and over-engineering read-only-ness for a single-threaded structure didn't seem worth the ceremony. `ThreadSafeLRUTTLCache.stats` is a `@property` that returns a copy specifically because reading four ints one-by-one while another thread might be mutating them would itself be a race (a caller could see `hits` from before a `put` and `misses` from after it).
+- **Revisit when:** if `LRUTTLCache.stats` needs to be exposed outside a trusted call site where accidental mutation would be a real bug.
+
+### Q1-011 PEP 695 generics (`class LRUTTLCache[K, V]:`) instead of `Generic[K, V]` + `TypeVar`
+- **Alternatives:** `from typing import Generic, TypeVar; K = TypeVar("K"); class LRUTTLCache(Generic[K, V]):` (the pre-3.12 idiom, still extremely common).
+- **Why:** `requires-python = ">=3.12"` and the repo targets 3.12+, so the newer syntax is available and is what `ruff --select UP` (pyupgrade) flags as preferred (rule `UP046`) — it's less boilerplate for the same meaning, and each class's type parameters are properly scoped to that class instead of living as module-level names that could be (and in an earlier draft, briefly were) accidentally shared across unrelated classes.
+- **Revisit when:** never, unless this package needs to support pre-3.12 Python, which the brief explicitly rules out.
+
+### Q1-012 `__contains__` is a pure peek: no recency change, no stats increment
+- **Alternatives:** treat `key in cache` as equivalent to a `get` for stats purposes (count it as a hit/miss); promote on contains like `get` does.
+- **Why:** the brief is explicit that `__contains__` "must not change recency," and the natural reading of `in` is "does this exist," a question, not an access. Silently mutating LRU order (or hit/miss counters meant to describe *actual cache usage*) as a side effect of asking a question would violate the principle of least surprise — `if key in cache: value = cache.get(key)` is a common pattern, and if the `in` check already promoted/counted, the subsequent `get` would double-count.
+- **Revisit when:** never expected to change — this is a correctness requirement from the brief, not a judgment call.

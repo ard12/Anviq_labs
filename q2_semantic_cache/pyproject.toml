@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "semantic_cache"
+version = "0.1.0"
+description = "Semantic cache in front of an LLM API (Anviq Labs interview, Q2)"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "hypothesis>=6"]
+# Real embedding backends. Never imported at module top level of core code -- see embedders.py.
+local-embed = ["sentence-transformers>=2.2"]
+api-embed = ["openai>=1.0"]
+# LLMJudgeVerifier piggybacks on the same OpenAI client as api-embed (see DECISIONS.md).
+llm-judge = ["openai>=1.0"]
+
+[tool.setuptools]
+packages = ["semantic_cache"]

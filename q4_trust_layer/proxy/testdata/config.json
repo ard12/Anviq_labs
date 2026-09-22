@@ -1,0 +1,12 @@
+{
+  "listen": ":8080",
+  "control_base_url": "",
+  "servers": {
+    "fs": "http://localhost:9101"
+  },
+  "event_log_dir": "./events",
+  "quarantine_poll_interval_ms": 1000,
+  "control_timeout_ms": 1500,
+  "relist_interval_ms": 30000,
+  "event_channel_size": 4096
+}

@@ -1,0 +1,70 @@
+{"a": "What is the capital of France?", "b": "Can you tell me France's capital city?", "same": true, "category": "paraphrase"}
+{"a": "How many continents are there?", "b": "What is the total number of continents on Earth?", "same": true, "category": "paraphrase"}
+{"a": "What is the boiling point of water at sea level?", "b": "At what temperature does water boil at sea level?", "same": true, "category": "paraphrase"}
+{"a": "Who wrote Romeo and Juliet?", "b": "Romeo and Juliet was written by whom?", "same": true, "category": "paraphrase"}
+{"a": "What is the speed of light?", "b": "How fast does light travel?", "same": true, "category": "paraphrase"}
+{"a": "What are the benefits of regular exercise?", "b": "Why is regular exercise good for you?", "same": true, "category": "paraphrase"}
+{"a": "How do I convert Celsius to Fahrenheit?", "b": "What's the formula to convert Celsius into Fahrenheit?", "same": true, "category": "paraphrase"}
+{"a": "What is machine learning?", "b": "Can you explain what machine learning is?", "same": true, "category": "paraphrase"}
+{"a": "What causes rainbows?", "b": "Why do rainbows form?", "same": true, "category": "paraphrase"}
+{"a": "What is the largest planet in the solar system?", "b": "Which planet is the biggest in our solar system?", "same": true, "category": "paraphrase"}
+{"a": "How does photosynthesis work?", "b": "Can you explain the process of photosynthesis?", "same": true, "category": "paraphrase"}
+{"a": "What is the tallest mountain in the world?", "b": "Which mountain is the tallest on Earth?", "same": true, "category": "paraphrase"}
+{"a": "What is a black hole?", "b": "Can you describe what a black hole is?", "same": true, "category": "paraphrase"}
+{"a": "How do vaccines work?", "b": "What is the mechanism by which vaccines work?", "same": true, "category": "paraphrase"}
+{"a": "What is the difference between a virus and a bacteria?", "b": "How do viruses differ from bacteria?", "same": true, "category": "paraphrase"}
+{"a": "What is compound interest?", "b": "Can you explain compound interest?", "same": true, "category": "paraphrase"}
+{"a": "How do airplanes fly?", "b": "What makes airplanes able to fly?", "same": true, "category": "paraphrase"}
+{"a": "What is the population of Japan?", "b": "How many people live in Japan?", "same": true, "category": "paraphrase"}
+{"a": "What language is spoken in Brazil?", "b": "What is the official language of Brazil?", "same": true, "category": "paraphrase"}
+{"a": "How long does it take to boil an egg?", "b": "What is the typical boiling time for an egg?", "same": true, "category": "paraphrase"}
+{"a": "What is the capital of Austria?", "b": "What is the capital of Australia?", "same": false, "category": "entity_swap"}
+{"a": "What is the capital of France?", "b": "What is the capital of Germany?", "same": false, "category": "entity_swap"}
+{"a": "How do I read a file in Python?", "b": "How do I read a file in Java?", "same": false, "category": "entity_swap"}
+{"a": "Who is the president of the United States?", "b": "Who is the president of Mexico?", "same": false, "category": "entity_swap"}
+{"a": "What is the population of China?", "b": "What is the population of India?", "same": false, "category": "entity_swap"}
+{"a": "What is the tallest mountain in Nepal?", "b": "What is the tallest mountain in Argentina?", "same": false, "category": "entity_swap"}
+{"a": "Who wrote Pride and Prejudice?", "b": "Who wrote Wuthering Heights?", "same": false, "category": "entity_swap"}
+{"a": "What is the currency of Japan?", "b": "What is the currency of South Korea?", "same": false, "category": "entity_swap"}
+{"a": "What is the main export of Brazil?", "b": "What is the main export of Chile?", "same": false, "category": "entity_swap"}
+{"a": "How do I install React?", "b": "How do I install Vue?", "same": false, "category": "entity_swap"}
+{"a": "What is the largest city in Canada?", "b": "What is the largest city in the United Kingdom?", "same": false, "category": "entity_swap"}
+{"a": "What's the official language of Egypt?", "b": "What's the official language of Kenya?", "same": false, "category": "entity_swap"}
+{"a": "What are the top 5 startups in fintech?", "b": "What are the top 10 startups in fintech?", "same": false, "category": "number_change"}
+{"a": "What was the revenue in 2023?", "b": "What was the revenue in 2024?", "same": false, "category": "number_change"}
+{"a": "How many calories are in a 100g apple?", "b": "How many calories are in a 200g apple?", "same": false, "category": "number_change"}
+{"a": "What's the interest rate for a 15-year mortgage?", "b": "What's the interest rate for a 30-year mortgage?", "same": false, "category": "number_change"}
+{"a": "List the top 3 programming languages in 2020.", "b": "List the top 3 programming languages in 2023.", "same": false, "category": "number_change"}
+{"a": "How many employees does the company have at 50 offices?", "b": "How many employees does the company have at 200 offices?", "same": false, "category": "number_change"}
+{"a": "What is 15% of 200?", "b": "What is 25% of 200?", "same": false, "category": "number_change"}
+{"a": "How long is a marathon in kilometers?", "b": "How long is a half marathon in kilometers?", "same": false, "category": "number_change"}
+{"a": "What's the price of a 2-bedroom apartment?", "b": "What's the price of a 4-bedroom apartment?", "same": false, "category": "number_change"}
+{"a": "How many days are in a leap year?", "b": "How many days are in a normal year?", "same": false, "category": "number_change"}
+{"a": "What is the GDP growth rate for Q1 2023?", "b": "What is the GDP growth rate for Q3 2023?", "same": false, "category": "number_change"}
+{"a": "What's the speed limit on a highway at 65 mph?", "b": "What's the speed limit on a highway at 55 mph?", "same": false, "category": "number_change"}
+{"a": "Is Austria safe to visit?", "b": "Is Austria not safe to visit?", "same": false, "category": "negation"}
+{"a": "Should I invest in bonds?", "b": "Should I never invest in bonds?", "same": false, "category": "negation"}
+{"a": "Is caffeine good for your heart?", "b": "Is caffeine not good for your heart?", "same": false, "category": "negation"}
+{"a": "Can you eat shellfish during pregnancy?", "b": "Can you not eat shellfish during pregnancy?", "same": false, "category": "negation"}
+{"a": "Does this medication interact with alcohol?", "b": "Does this medication not interact with alcohol?", "same": false, "category": "negation"}
+{"a": "Is it safe to travel to that region?", "b": "Is it not safe to travel to that region?", "same": false, "category": "negation"}
+{"a": "Do antibiotics work against viruses?", "b": "Do antibiotics not work against viruses?", "same": false, "category": "negation"}
+{"a": "Is the store open on Sundays?", "b": "Is the store not open on Sundays?", "same": false, "category": "negation"}
+{"a": "Will this flight be delayed?", "b": "Will this flight not be delayed?", "same": false, "category": "negation"}
+{"a": "Can I bring a pet on this flight?", "b": "Can I not bring a pet on this flight?", "same": false, "category": "negation"}
+{"a": "What are the symptoms of the flu?", "b": "What are the symptoms of a cold?", "same": false, "category": "scope_change"}
+{"a": "How do I fix a flat tire on a bicycle?", "b": "How do I fix a flat tire on a car?", "same": false, "category": "scope_change"}
+{"a": "What's the best way to learn Python for data science?", "b": "What's the best way to learn Python for web development?", "same": false, "category": "scope_change"}
+{"a": "What are the tax implications of selling stocks?", "b": "What are the tax implications of selling a house?", "same": false, "category": "scope_change"}
+{"a": "How do I set up a VPN on my laptop?", "b": "How do I set up a VPN on my phone?", "same": false, "category": "scope_change"}
+{"a": "What's the return policy for online orders?", "b": "What's the return policy for in-store purchases?", "same": false, "category": "scope_change"}
+{"a": "How do I apply for a student visa?", "b": "How do I apply for a work visa?", "same": false, "category": "scope_change"}
+{"a": "What ingredients do I need for a vegan lasagna?", "b": "What ingredients do I need for a beef lasagna?", "same": false, "category": "scope_change"}
+{"a": "How do I reset my email password?", "b": "How do I reset my email username?", "same": false, "category": "scope_change"}
+{"a": "What's the warranty on a new laptop?", "b": "What's the warranty on a refurbished laptop?", "same": false, "category": "scope_change"}
+{"a": "What is the capital of France?", "b": "How do I bake sourdough bread?", "same": false, "category": "unrelated"}
+{"a": "What causes rainbows?", "b": "What's the best programming language for beginners?", "same": false, "category": "unrelated"}
+{"a": "How does photosynthesis work?", "b": "What are the rules of chess?", "same": false, "category": "unrelated"}
+{"a": "What is compound interest?", "b": "How do I train for a marathon?", "same": false, "category": "unrelated"}
+{"a": "What is a black hole?", "b": "What's a good recipe for lasagna?", "same": false, "category": "unrelated"}
+{"a": "How do vaccines work?", "b": "What's the history of jazz music?", "same": false, "category": "unrelated"}
